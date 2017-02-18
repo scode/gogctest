@@ -1,0 +1,26 @@
+= gogctest
+
+== Running it
+
+ go build . && GODEBUG=gctrace=1, ./gogctest
+
+It needs approximately 3 GB of memory by default (modify code to adjust).
+
+== What is it
+
+A small test intended to to exercise a workload that most traditional garbage collectors fail at.
+
+It creates an LRU cache at a fixed size (number of entries), and infinitely adds small items to it.
+After having inserted enough items to fill the LRU twice, it slows down its operation by sleeping periodically.
+
+Despite being very simple, traditional GCs tend to cause non-trivial pause times under this workload because of a
+combination of properties (some of which may not apply depending on GC):
+
+* The heap size is non-trivially large.
+* There are lots of tiny objects.
+* There are lots of pointers.
+* Many of the pointers are intergenerational/interregion (if running with such a GC).
+* There is lots of pointer mutation to bold old and new pointers.
+* The nature of the LRU means that objects mostly die old. This is the worst case for a generational GC.
+
+A similar one for the JVM is at https://github.com/scode/lrugctest
