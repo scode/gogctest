@@ -11,7 +11,7 @@ It needs approximately 3 GB of memory by default (modify code to adjust).
 A small test intended to to exercise a workload that most traditional garbage collectors fail at.
 
 It creates an LRU cache at a fixed size (number of entries), and infinitely adds small items to it.
-After having inserted enough items to fill the LRU twice, it slows down its operation by sleeping periodically.
+After having inserted enough items to fill the LRU twice, it slows down its operation.
 
 Despite being very simple, traditional GCs tend to cause non-trivial pause times under this workload because of a
 combination of properties (some of which may not apply depending on GC):

@@ -1,8 +1,10 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"github.com/hashicorp/golang-lru"
+	"golang.org/x/time/rate"
 	"sync"
 	"time"
 )
@@ -10,11 +12,13 @@ import (
 const (
 	THREAD_COUNT = 1
 	// Total size of LRU across all threads.
-	TOTAL_LRU_SIZE                 = 10000000
+	TOTAL_LRU_SIZE = 10000000
+	// Total rate of LRU adds across all threads.
+	TOTAL_ADD_RATE = 10000
+	ADD_RATE_BURST = TOTAL_ADD_RATE / 10
+
 	PAUSE_REPORT_THRESHOLD_MILLIS  = 1
 	SLOW_PHASE_THRESHOLD           = TOTAL_LRU_SIZE * 2
-	PAUSE_DURATION                 = "5ms"
-	PAUSE_INTERVAL                 = 1000
 	HICCUP_DETECTOR_SLEEP_DURATION = "1ms"
 	HICCUP_DETECTOR_THRESHOLD      = "2ms"
 )
@@ -35,7 +39,7 @@ func main() {
 func lruWorker() {
 	lruSize := TOTAL_LRU_SIZE / THREAD_COUNT
 	l, _ := lru.New(lruSize)
-	d, _ := time.ParseDuration(PAUSE_DURATION)
+	rateLimiter := rate.NewLimiter(TOTAL_ADD_RATE, ADD_RATE_BURST)
 
 	fmt.Println("filling lru")
 	for i := uint64(0); i < (1 << 63); i++ {
@@ -57,8 +61,8 @@ func lruWorker() {
 			fmt.Println("slow phase starting")
 		}
 
-		if i > SLOW_PHASE_THRESHOLD && i%PAUSE_INTERVAL == 0 {
-			time.Sleep(d)
+		if i > SLOW_PHASE_THRESHOLD {
+			rateLimiter.Wait(context.TODO())
 		}
 	}
 }
