@@ -3,10 +3,12 @@ package main
 import (
 	"fmt"
 	"github.com/hashicorp/golang-lru"
+	"sync"
 	"time"
 )
 
 const (
+	THREAD_COUNT                  = 1
 	LRU_SIZE                      = 10000000
 	PAUSE_REPORT_THRESHOLD_MILLIS = 1
 	SLOW_PHASE_THRESHOLD          = LRU_SIZE * 2
@@ -15,6 +17,15 @@ const (
 )
 
 func main() {
+	wg := sync.WaitGroup{}
+	wg.Add(THREAD_COUNT)
+	for i := 0; i < THREAD_COUNT; i++ {
+		go lruWorker()
+	}
+	wg.Wait()
+}
+
+func lruWorker() {
 	l, _ := lru.New(LRU_SIZE)
 	d, _ := time.ParseDuration(PAUSE_DURATION)
 
