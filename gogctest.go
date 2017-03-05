@@ -8,10 +8,11 @@ import (
 )
 
 const (
-	THREAD_COUNT                   = 1
-	LRU_SIZE                       = 10000000
+	THREAD_COUNT = 1
+	// Total size of LRU across all threads.
+	TOTAL_LRU_SIZE                 = 10000000
 	PAUSE_REPORT_THRESHOLD_MILLIS  = 1
-	SLOW_PHASE_THRESHOLD           = LRU_SIZE * 2
+	SLOW_PHASE_THRESHOLD           = TOTAL_LRU_SIZE * 2
 	PAUSE_DURATION                 = "5ms"
 	PAUSE_INTERVAL                 = 1000
 	HICCUP_DETECTOR_SLEEP_DURATION = "1ms"
@@ -32,7 +33,8 @@ func main() {
 }
 
 func lruWorker() {
-	l, _ := lru.New(LRU_SIZE)
+	lruSize := TOTAL_LRU_SIZE / THREAD_COUNT
+	l, _ := lru.New(lruSize)
 	d, _ := time.ParseDuration(PAUSE_DURATION)
 
 	fmt.Println("filling lru")
@@ -47,7 +49,7 @@ func lruWorker() {
 			fmt.Printf("lru add took %v ms\n", elapsedMillis)
 		}
 
-		if i == LRU_SIZE {
+		if i == uint64(lruSize) {
 			fmt.Println("lru filled")
 		}
 
