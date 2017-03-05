@@ -10,11 +10,13 @@ It needs approximately 3 GB of memory by default (modify code to adjust).
 
 A small test intended to to exercise a workload that most traditional garbage collectors fail at.
 
-It creates an LRU cache at a fixed size (number of entries), and infinitely adds small items to it.
-After having inserted enough items to fill the LRU twice, it slows down its operation.
+It creates a number of goroutines, each having an LRU cache at a fixed
+size (number of entries), and indefinitely adds small items to it in a
+rate limited fashion.
 
-Despite being very simple, traditional GCs tend to cause non-trivial pause times under this workload because of a
-combination of properties (some of which may not apply depending on GC):
+Despite being very simple, traditional GCs tend to cause non-trivial
+pause times under this workload because of a combination of properties
+(some of which may not apply depending on GC):
 
 * The heap size is non-trivially large.
 * There are lots of tiny objects.

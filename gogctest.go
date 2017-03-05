@@ -19,7 +19,6 @@ const (
 	ADD_RATE_BURST = TOTAL_ADD_RATE / 10
 
 	PAUSE_REPORT_THRESHOLD_MILLIS  = 1
-	SLOW_PHASE_THRESHOLD           = TOTAL_LRU_SIZE * 2
 	HICCUP_DETECTOR_SLEEP_DURATION = "1ms"
 	HICCUP_DETECTOR_THRESHOLD      = "2ms"
 )
@@ -58,13 +57,7 @@ func lruWorker() {
 			log.Print("lru full")
 		}
 
-		if i == SLOW_PHASE_THRESHOLD {
-			log.Print("slow phase starting")
-		}
-
-		if i > SLOW_PHASE_THRESHOLD {
-			rateLimiter.Wait(context.TODO())
-		}
+		rateLimiter.Wait(context.TODO())
 	}
 }
 
