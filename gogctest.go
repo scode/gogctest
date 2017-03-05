@@ -18,7 +18,7 @@ const (
 	TOTAL_ADD_RATE = 10000
 	ADD_RATE_BURST = TOTAL_ADD_RATE / 10
 
-	PAUSE_REPORT_THRESHOLD_MILLIS  = 1
+	PAUSE_REPORT_THRESHOLD         = "1ms"
 	HICCUP_DETECTOR_SLEEP_DURATION = "1ms"
 	HICCUP_DETECTOR_THRESHOLD      = "2ms"
 )
@@ -41,16 +41,18 @@ func lruWorker() {
 	lruSize := TOTAL_LRU_SIZE / THREAD_COUNT
 	l, _ := lru.New(lruSize)
 	rateLimiter := rate.NewLimiter(TOTAL_ADD_RATE, ADD_RATE_BURST)
+	pauseReportThreshold, err := time.ParseDuration(PAUSE_REPORT_THRESHOLD)
+	if err != nil {
+		log.Panic("couldn't parse duration")
+	}
 
 	for i := uint64(0); i < (1 << 63); i++ {
-		startTime := time.Now().UnixNano()
+		beforeTime := time.Now()
 		l.Add(i, fmt.Sprintf("val%s", i))
-		stopTime := time.Now().UnixNano()
+		elapsedDuration := time.Since(beforeTime)
 
-		elapsedMillis := (stopTime - startTime) / 1000000
-
-		if elapsedMillis > PAUSE_REPORT_THRESHOLD_MILLIS {
-			log.Printf("lru add latency %v ms", elapsedMillis)
+		if elapsedDuration.Nanoseconds() > pauseReportThreshold.Nanoseconds() {
+			log.Printf("lru add latency %v ms", elapsedDuration.Nanoseconds()/1000000)
 		}
 
 		if i == uint64(lruSize) {
