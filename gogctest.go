@@ -40,7 +40,7 @@ func main() {
 func lruWorker() {
 	lruSize := TOTAL_LRU_SIZE / THREAD_COUNT
 	l, _ := lru.New(lruSize)
-	rateLimiter := rate.NewLimiter(TOTAL_ADD_RATE, ADD_RATE_BURST)
+	rateLimiter := rate.NewLimiter(TOTAL_ADD_RATE/THREAD_COUNT, ADD_RATE_BURST)
 	pauseReportThreshold, err := time.ParseDuration(PAUSE_REPORT_THRESHOLD)
 	if err != nil {
 		log.Panic("couldn't parse duration")
