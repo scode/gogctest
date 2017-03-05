@@ -85,10 +85,6 @@ func lruWorker() {
 			log.Printf("lru add latency %v ms", elapsedDuration.Nanoseconds()/1000000)
 		}
 
-		if i == uint64(lruSize) {
-			log.Print("lru full")
-		}
-
 		rateLimiter.Wait(context.TODO())
 	}
 }
