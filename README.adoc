@@ -2,7 +2,7 @@
 
 == Running it
 
- go get && go build . && GODEBUG=gctrace=1, ./gogctest
+ go get && go build . && GODEBUG=gctrace=1, ./gogctest -lrusize 10000000 -addrate 10000
 
 It needs approximately 3 GB of memory by default (modify code to adjust).
 
