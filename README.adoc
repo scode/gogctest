@@ -4,7 +4,7 @@
 
  go get && go build . && GODEBUG=gctrace=1, ./gogctest -lrusize 10000000 -addrate 10000
 
-It needs approximately 3 GB of memory by default (modify code to adjust).
+It needs approximately 3 GB of memory by default (modify `-lrusize` argument to adjust).
 
 == What is it
 
