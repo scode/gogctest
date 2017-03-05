@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/hashicorp/golang-lru"
 	"golang.org/x/time/rate"
+	"log"
 	"sync"
 	"time"
 )
@@ -29,6 +30,7 @@ func main() {
 	wg.Add(1)
 	go hiccupDetector()
 
+	log.Printf("starting %v workers", THREAD_COUNT)
 	wg.Add(THREAD_COUNT)
 	for i := 0; i < THREAD_COUNT; i++ {
 		go lruWorker()
@@ -41,7 +43,6 @@ func lruWorker() {
 	l, _ := lru.New(lruSize)
 	rateLimiter := rate.NewLimiter(TOTAL_ADD_RATE, ADD_RATE_BURST)
 
-	fmt.Println("filling lru")
 	for i := uint64(0); i < (1 << 63); i++ {
 		startTime := time.Now().UnixNano()
 		l.Add(i, fmt.Sprintf("val%s", i))
@@ -50,15 +51,15 @@ func lruWorker() {
 		elapsedMillis := (stopTime - startTime) / 1000000
 
 		if elapsedMillis > PAUSE_REPORT_THRESHOLD_MILLIS {
-			fmt.Printf("lru add took %v ms\n", elapsedMillis)
+			log.Printf("lru add latency %v ms", elapsedMillis)
 		}
 
 		if i == uint64(lruSize) {
-			fmt.Println("lru filled")
+			log.Print("lru full")
 		}
 
 		if i == SLOW_PHASE_THRESHOLD {
-			fmt.Println("slow phase starting")
+			log.Print("slow phase starting")
 		}
 
 		if i > SLOW_PHASE_THRESHOLD {
@@ -82,7 +83,7 @@ func hiccupDetector() {
 		time.Sleep(sleepDuration)
 		afterTime := time.Now()
 		if afterTime.After(beforeTime.Add(thresholdDuration)) {
-			fmt.Printf("hiccup: %vms\n",
+			log.Printf("hiccup: %vms\n",
 				(afterTime.Sub(beforeTime).Nanoseconds()-sleepDuration.Nanoseconds())/1000000)
 		}
 	}
