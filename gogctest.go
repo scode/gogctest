@@ -13,20 +13,20 @@ import (
 )
 
 const (
-	THREAD_COUNT = 1000
+	threadCount = 1000
 	// Total size of LRU across all threads.
-	DEFAULT_TOTAL_LRU_SIZE = 10000000
+	defaultTotalLruSize = 10000000
 	// Total rate of LRU adds across all threads.
-	DEFAULT_TOTAL_ADD_RATE = 10000
+	defaultTotalAddRate = 10000
 
-	PAUSE_REPORT_THRESHOLD         = "1ms"
-	HICCUP_DETECTOR_SLEEP_DURATION = "1ms"
-	HICCUP_DETECTOR_THRESHOLD      = "2ms"
+	pauseReportThreshold        = "1ms"
+	hiccupDetectorSleepDuration = "1ms"
+	hiccupDetectorThreshold     = "2ms"
 
 	// Delay after starting the tool; allows all lru workers to start. Actual delay
 	// will be jittered on a per-thread basis to avoid thundering herd causing huge
 	// CPU burst in the beginning.
-	STARTUP_DELAY = "5s"
+	startupDelay = "5s"
 )
 
 var totalAddRate float64
@@ -34,33 +34,33 @@ var addRateBurst int
 var totalLruSize int
 
 func main() {
-	flag.Float64Var(&totalAddRate, "addrate", DEFAULT_TOTAL_ADD_RATE, "Number of LRU adds per second.")
-	flag.IntVar(&totalLruSize, "lrusize", DEFAULT_TOTAL_LRU_SIZE, "LRU size (number of entries)")
+	flag.Float64Var(&totalAddRate, "addrate", defaultTotalAddRate, "Number of LRU adds per second.")
+	flag.IntVar(&totalLruSize, "lrusize", defaultTotalLruSize, "LRU size (number of entries)")
 	flag.Parse()
 
 	// LRU implementation panics on use if size is 0, so don't allow sizes smaller than
 	// thread count since that would lead to 0 per thread.
-	if totalLruSize < THREAD_COUNT {
+	if totalLruSize < threadCount {
 		log.Fatal("lru size must be >= thread count")
 	}
 
-	addRateBurst = int(totalAddRate/THREAD_COUNT) / 10
+	addRateBurst = int(totalAddRate/threadCount) / 10
 
 	wg := sync.WaitGroup{}
 
 	wg.Add(1)
 	go hiccupDetector()
 
-	log.Printf("starting %v workers", THREAD_COUNT)
-	wg.Add(THREAD_COUNT)
-	for i := 0; i < THREAD_COUNT; i++ {
+	log.Printf("starting %v workers", threadCount)
+	wg.Add(threadCount)
+	for i := 0; i < threadCount; i++ {
 		go lruWorker()
 	}
 	wg.Wait()
 }
 
 func lruWorker() {
-	startupDelay, err := time.ParseDuration(STARTUP_DELAY)
+	startupDelay, err := time.ParseDuration(startupDelay)
 	if err != nil {
 		log.Panic("couldn't parse duration")
 	}
@@ -68,10 +68,10 @@ func lruWorker() {
 		float64(startupDelay.Nanoseconds())*
 			rand.Float64())))
 
-	lruSize := totalLruSize / THREAD_COUNT
+	lruSize := totalLruSize / threadCount
 	l, _ := lru.New(lruSize)
-	rateLimiter := rate.NewLimiter(rate.Limit(float64(totalAddRate)/float64(THREAD_COUNT)), addRateBurst)
-	pauseReportThreshold, err := time.ParseDuration(PAUSE_REPORT_THRESHOLD)
+	rateLimiter := rate.NewLimiter(rate.Limit(float64(totalAddRate)/float64(threadCount)), addRateBurst)
+	pauseReportThreshold, err := time.ParseDuration(pauseReportThreshold)
 	if err != nil {
 		log.Panic("couldn't parse duration")
 	}
@@ -93,11 +93,11 @@ func lruWorker() {
 }
 
 func hiccupDetector() {
-	sleepDuration, err := time.ParseDuration(HICCUP_DETECTOR_SLEEP_DURATION)
+	sleepDuration, err := time.ParseDuration(hiccupDetectorSleepDuration)
 	if err != nil {
 		panic("ParseDuration failed")
 	}
-	thresholdDuration, err := time.ParseDuration(HICCUP_DETECTOR_THRESHOLD)
+	thresholdDuration, err := time.ParseDuration(hiccupDetectorThreshold)
 	if err != nil {
 		panic("ParseDuration failed")
 	}
