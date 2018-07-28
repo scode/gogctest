@@ -6,14 +6,13 @@ go:
   - "1.10"
 
 install:
-  - go get github.com/Masterminds/glide
+  - go get -u golang.org/x/vgo
   - go get github.com/golang/lint/golint
   - go get github.com/kisielk/errcheck
-  - glide install
 
 script:
-  - go build
-  - go test $(glide nv)
+  - vgo build
+  - vgo test
   - errcheck
   - golint
   - go vet
