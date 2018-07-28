@@ -1,19 +1,16 @@
 language: go
 go:
-  - "1.7"
-  - "1.8"
-  - "1.9"
   - "1.10"
 
 install:
-  - go get github.com/Masterminds/glide
+  - go get -u golang.org/x/vgo
   - go get github.com/golang/lint/golint
   - go get github.com/kisielk/errcheck
-  - glide install
 
 script:
-  - go build
-  - go test $(glide nv)
+  - vgo build
+  - vgo test
+  - vgo mod -vendor
   - errcheck
   - golint
   - go vet
