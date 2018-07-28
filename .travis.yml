@@ -15,4 +15,4 @@ script:
   - go test $(glide nv)
   - errcheck
 #  - golint
-#  - go vet
+  - go vet
