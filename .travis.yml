@@ -15,5 +15,5 @@ script:
   - go build
   - go test $(glide nv)
   - errcheck
-#  - golint
+  - golint
   - go vet
