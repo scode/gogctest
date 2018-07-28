@@ -13,6 +13,7 @@ install:
 script:
   - vgo build
   - vgo test
+  - vgo mod -vendor
   - errcheck
   - golint
   - go vet
