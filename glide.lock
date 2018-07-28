@@ -1,0 +1,16 @@
+hash: e519ebc8bb7a28172bd8516e8175d7b1798efb1636f9502421c7374111b3f4cc
+updated: 2018-07-27T22:01:12.62390488-07:00
+imports:
+- name: github.com/hashicorp/golang-lru
+  version: 0fb14efe8c47ae851c0034ed7a448854d3d34cf3
+  subpackages:
+  - simplelru
+- name: golang.org/x/net
+  version: 3673e40ba22529d22c3fd7c93e97b0ce50fa7bdd
+  subpackages:
+  - context
+- name: golang.org/x/time
+  version: fbb02b2291d28baffd63558aa44b4b56f178d650
+  subpackages:
+  - rate
+testImports: []
