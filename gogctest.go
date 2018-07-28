@@ -78,7 +78,7 @@ func lruWorker() {
 
 	for i := uint64(0); i < (1 << 63); i++ {
 		beforeTime := time.Now()
-		l.Add(i, fmt.Sprintf("val%s", i))
+		l.Add(i, fmt.Sprintf("val%d", i))
 		elapsedDuration := time.Since(beforeTime)
 
 		if elapsedDuration.Nanoseconds() > pauseReportThreshold.Nanoseconds() {
