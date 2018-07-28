@@ -85,7 +85,10 @@ func lruWorker() {
 			log.Printf("lru add latency %v ms", elapsedDuration.Nanoseconds()/1000000)
 		}
 
-		rateLimiter.Wait(context.TODO())
+		err := rateLimiter.Wait(context.TODO())
+		if err != nil {
+			panic(err)
+		}
 	}
 }
 
