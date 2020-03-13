@@ -4,12 +4,13 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"github.com/hashicorp/golang-lru"
-	"golang.org/x/time/rate"
 	"log"
 	"math/rand"
 	"sync"
 	"time"
+
+	lru "github.com/hashicorp/golang-lru"
+	"golang.org/x/time/rate"
 )
 
 const (
