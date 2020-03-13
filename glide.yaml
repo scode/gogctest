@@ -1,6 +1,0 @@
-package: github.com/scode/gogctest
-import:
-- package: github.com/hashicorp/golang-lru
-- package: golang.org/x/time
-  subpackages:
-  - rate
