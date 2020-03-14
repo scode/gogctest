@@ -39,8 +39,8 @@ jobs:
 
     - name: install golangci-lint
       run: |
-        curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.23.8
-        $GOPATH/bin/golangci-lint --version
+        curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s v1.23.8
+        ./bin/golangci-lint --version
 
     - name: golangci-lint run
-      run: $GOPATH/bin/golangci-lint run -v --max-issues-per-linter 500 --max-same-issues 500
+      run: ./bin/golangci-lint run -v --max-issues-per-linter 500 --max-same-issues 500
