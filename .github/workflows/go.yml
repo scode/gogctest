@@ -24,7 +24,7 @@ jobs:
     - name: go test
       run: go test -race -v ./...
 
-lint:
+  lint:
     name: lint
     runs-on: ubuntu-latest
     steps:
