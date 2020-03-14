@@ -1,8 +1,8 @@
 name: CI
 on: [push]
 jobs:
-  build_go_1_13:
-    name: go / 1.13 / build+test
+  build_go_1_14:
+    name: go / 1.14 / build+test
     runs-on: ubuntu-latest
     steps:
     - name: setup go 1.14
