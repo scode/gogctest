@@ -1,0 +1,46 @@
+name: CI
+on: [push]
+jobs:
+  build_go_1_13:
+    name: go / 1.13 / build+test
+    runs-on: ubuntu-latest
+    steps:
+    - name: setup go 1.14
+      uses: actions/setup-go@v1
+      with:
+        go-version: 1.14
+      id: go
+
+    - name: checkout code
+      uses: actions/checkout@v1
+
+    - name: go get
+      run: |
+        go get -v ./...
+
+    - name: go build
+      run: go build -v saltybox.go
+
+    - name: go test
+      run: go test -race -v ./...
+
+lint:
+    name: lint
+    runs-on: ubuntu-latest
+    steps:
+    - name: setup go 1.14
+      uses: actions/setup-go@v1
+      with:
+        go-version: 1.14
+      id: go
+
+    - name: checkout code
+      uses: actions/checkout@v1
+
+    - name: install golangci-lint
+      run: |
+        curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.23.8
+        golangci-lint --version
+
+    - name: golangci-lint run
+      run: golangci-lint run -v --max-issues-per-linter 500 --max-same-issues 500
