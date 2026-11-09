@@ -2,13 +2,21 @@
 
 == Running it
 
- go get && go build . && GODEBUG=gctrace=1, ./gogctest -lrusize 10000000 -addrate 10000
+ go build . && GODEBUG=gctrace=1 ./gogctest -lrusize 10000000 -addrate 10000
 
-It needs approximately 3 GB of memory by default (modify `-lrusize` argument to adjust).
+The heap grows until every cache is full, which takes `lrusize / addrate`
+seconds (about 17 minutes with the values above). Pause behavior before that
+point is not representative. Raising `-addrate` gets there sooner, but it also
+produces garbage faster, so pauses at a higher rate are not the same thing as
+pauses at the default rate.
+
+It needs about 3 GB of memory by default (modify `-lrusize` argument to adjust).
+One run with the default `-lrusize` on Go 1.27 peaked at 2.7 GB resident once
+the caches were full; treat that as a ballpark, not a guarantee.
 
 == What is it
 
-A small test intended to to exercise a workload that most traditional garbage collectors fail at.
+A small test intended to exercise a workload that most traditional garbage collectors fail at.
 
 It creates a number of goroutines, each having an LRU cache at a fixed
 size (number of entries), and indefinitely adds small items to it in a
@@ -22,7 +30,7 @@ pause times under this workload because of a combination of properties
 * There are lots of tiny objects.
 * There are lots of pointers.
 * Many of the pointers are intergenerational/interregion (if running with such a GC).
-* There is lots of pointer mutation to bold old and new pointers.
+* There is lots of pointer mutation to both old and new pointers.
 * The nature of the LRU means that objects mostly die old. This is the worst case for a generational GC.
 
 A similar one for the JVM is at https://github.com/scode/lrugctest

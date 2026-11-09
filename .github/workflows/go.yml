@@ -1,5 +1,9 @@
 name: CI
 on: [push]
+
+permissions:
+  contents: read
+
 jobs:
   build_go_1_27:
     name: go / 1.27 / build+test
@@ -15,14 +19,12 @@ jobs:
       uses: actions/setup-go@v7
       with:
         go-version: '1.27'
-      id: go
 
-    - name: go get
-      run: |
-        go get -v ./...
+    - name: go mod tidy
+      run: go mod tidy -diff
 
     - name: go build
-      run: go build -v gogctest.go
+      run: go build -v ./...
 
     - name: go test
       run: go test -race -v ./...
@@ -39,8 +41,13 @@ jobs:
       with:
         go-version: '1.27'
 
+    # Linter selection and issue limits live in .golangci.yml so that a local
+    # `golangci-lint run` uses the same configuration as CI. The version is
+    # pinned because new releases add checks, which would otherwise start
+    # failing CI on unchanged code; bump it deliberately. Run the same version
+    # locally with:
+    #   go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.15.0 run
     - name: golangci-lint
       uses: golangci/golangci-lint-action@v9
       with:
-        version: latest
-        args: --max-issues-per-linter 500 --max-same-issues 500
+        version: v2.15.0

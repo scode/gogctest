@@ -1,3 +1,12 @@
+// Command gogctest runs a workload that is hard on garbage collectors: many
+// goroutines, each continuously adding small entries to its own fixed-size
+// LRU cache at a rate-limited pace.
+//
+// The program never exits on its own. It logs two kinds of latency outliers so
+// that GC pauses show up without a profiler: slow LRU adds (see
+// pauseReportThreshold) and oversleeps of a dedicated timer goroutine (see
+// hiccupDetector). Run it with GODEBUG=gctrace=1 to correlate those with GC
+// cycles.
 package main
 
 import (
@@ -5,7 +14,7 @@ import (
 	"flag"
 	"fmt"
 	"log"
-	"math/rand"
+	"math/rand/v2"
 	"sync"
 	"time"
 
@@ -20,96 +29,92 @@ const (
 	// Total rate of LRU adds across all threads.
 	defaultTotalAddRate = 10000
 
-	pauseReportThreshold        = "1ms"
-	hiccupDetectorSleepDuration = "1ms"
-	hiccupDetectorThreshold     = "2ms"
+	// A single LRU add slower than this is logged.
+	pauseReportThreshold = time.Millisecond
+
+	// The hiccup detector sleeps for hiccupDetectorSleepDuration in a loop and
+	// logs whenever a sleep takes longer than hiccupDetectorThreshold.
+	hiccupDetectorSleepDuration = time.Millisecond
+	hiccupDetectorThreshold     = 2 * time.Millisecond
 
 	// Delay after starting the tool; allows all lru workers to start. Actual delay
 	// will be jittered on a per-thread basis to avoid thundering herd causing huge
 	// CPU burst in the beginning.
-	startupDelay = "5s"
+	startupDelay = 5 * time.Second
 )
 
-var totalAddRate float64
-var addRateBurst int
-var totalLruSize int
+// Set in main, from command-line flags, before any worker starts, and
+// read-only afterwards.
+var (
+	totalAddRate float64
+	addRateBurst int
+	totalLruSize int
+)
 
 func main() {
 	flag.Float64Var(&totalAddRate, "addrate", defaultTotalAddRate, "Number of LRU adds per second.")
 	flag.IntVar(&totalLruSize, "lrusize", defaultTotalLruSize, "LRU size (number of entries)")
 	flag.Parse()
 
-	// LRU implementation panics on use if size is 0, so don't allow sizes smaller than
-	// thread count since that would lead to 0 per thread.
+	// Each worker gets totalLruSize/threadCount entries, and the LRU refuses a
+	// size of 0, so the total has to cover at least one entry per worker.
 	if totalLruSize < threadCount {
 		log.Fatal("lru size must be >= thread count")
 	}
 
 	addRateBurst = int(totalAddRate/threadCount) / 10
 
-	wg := sync.WaitGroup{}
-
-	wg.Add(1)
-	go hiccupDetector()
+	// Nothing below ever returns, so Wait blocks forever. It is there to keep
+	// main alive while the goroutines run.
+	var wg sync.WaitGroup
+	wg.Go(hiccupDetector)
 
 	log.Printf("starting %v workers", threadCount)
-	wg.Add(threadCount)
-	for i := 0; i < threadCount; i++ {
-		go lruWorker()
+	for range threadCount {
+		wg.Go(lruWorker)
 	}
 	wg.Wait()
 }
 
+// lruWorker owns one LRU cache and adds a fresh entry to it, forever, at
+// 1/threadCount of the total add rate. Keys never repeat, so once the cache is
+// full every add evicts the oldest entry; entries therefore die old, which is
+// the worst case for a generational collector.
 func lruWorker() {
-	startupDelay, err := time.ParseDuration(startupDelay)
-	if err != nil {
-		log.Panic("couldn't parse duration")
-	}
-	time.Sleep(time.Duration(int64(float64(startupDelay.Nanoseconds()) +
-		float64(startupDelay.Nanoseconds())*
-			rand.Float64())))
+	time.Sleep(startupDelay + rand.N(startupDelay))
 
-	lruSize := totalLruSize / threadCount
-	l, _ := lru.New[uint64, string](lruSize)
-	rateLimiter := rate.NewLimiter(rate.Limit(float64(totalAddRate)/float64(threadCount)), addRateBurst)
-	pauseReportThreshold, err := time.ParseDuration(pauseReportThreshold)
+	l, err := lru.New[uint64, string](totalLruSize / threadCount)
 	if err != nil {
-		log.Panic("couldn't parse duration")
+		log.Fatal(err)
 	}
+	rateLimiter := rate.NewLimiter(rate.Limit(totalAddRate/threadCount), addRateBurst)
 
-	for i := uint64(0); i < (1 << 63); i++ {
+	for i := uint64(0); ; i++ {
 		beforeTime := time.Now()
 		l.Add(i, fmt.Sprintf("val%d", i))
-		elapsedDuration := time.Since(beforeTime)
+		elapsed := time.Since(beforeTime)
 
-		if elapsedDuration.Nanoseconds() > pauseReportThreshold.Nanoseconds() {
-			log.Printf("lru add latency %v ms", elapsedDuration.Nanoseconds()/1000000)
+		if elapsed > pauseReportThreshold {
+			log.Printf("lru add latency %v ms", elapsed.Milliseconds())
 		}
 
-		err := rateLimiter.Wait(context.TODO())
-		if err != nil {
+		if err := rateLimiter.Wait(context.Background()); err != nil {
 			panic(err)
 		}
 	}
 }
 
+// hiccupDetector measures how late a short sleep wakes up, as a proxy for
+// stop-the-world pauses and scheduler stalls that affect every goroutine. The
+// logged value is the oversleep beyond hiccupDetectorSleepDuration, truncated
+// to whole milliseconds.
 func hiccupDetector() {
-	sleepDuration, err := time.ParseDuration(hiccupDetectorSleepDuration)
-	if err != nil {
-		panic("ParseDuration failed")
-	}
-	thresholdDuration, err := time.ParseDuration(hiccupDetectorThreshold)
-	if err != nil {
-		panic("ParseDuration failed")
-	}
-
 	for {
 		beforeTime := time.Now()
-		time.Sleep(sleepDuration)
-		afterTime := time.Now()
-		if afterTime.After(beforeTime.Add(thresholdDuration)) {
-			log.Printf("hiccup: %vms\n",
-				(afterTime.Sub(beforeTime).Nanoseconds()-sleepDuration.Nanoseconds())/1000000)
+		time.Sleep(hiccupDetectorSleepDuration)
+		slept := time.Since(beforeTime)
+		if slept > hiccupDetectorThreshold {
+			log.Printf("hiccup: %vms", (slept - hiccupDetectorSleepDuration).Milliseconds())
 		}
 	}
 }
