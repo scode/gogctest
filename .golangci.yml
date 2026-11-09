@@ -1,0 +1,26 @@
+version: "2"
+
+linters:
+  # The standard set (errcheck, govet, ineffassign, staticcheck, unused) plus
+  # common linters for bugs and outdated idioms.
+  enable:
+    - copyloopvar
+    - errorlint
+    - gocritic
+    - intrange
+    - misspell
+    - modernize
+    - nolintlint
+    - predeclared
+    - revive
+    - unconvert
+    - usestdlibvars
+
+formatters:
+  enable:
+    - gofmt
+    - goimports
+
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0
