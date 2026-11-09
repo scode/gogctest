@@ -2,6 +2,9 @@
 
 == Running it
 
+It needs Go 1.26 or later. An older `go` command (1.21 or later) downloads a
+suitable toolchain on its own unless `GOTOOLCHAIN` says otherwise.
+
  go build . && GODEBUG=gctrace=1 ./gogctest -lrusize 10000000 -addrate 10000
 
 The heap grows until every cache is full, which takes `lrusize / addrate`
@@ -13,6 +16,27 @@ pauses at the default rate.
 It needs about 3 GB of memory by default (modify `-lrusize` argument to adjust).
 One run with the default `-lrusize` on Go 1.27 peaked at 2.7 GB resident once
 the caches were full; treat that as a ballpark, not a guarantee.
+
+== Reading the output
+
+The program runs until you kill it. Apart from the `gc ...` lines that
+`GODEBUG=gctrace=1` adds, it logs two kinds of latency outliers:
+
+* `lru add latency N ms`: a single cache add took longer than 1 ms. N is
+  the duration rounded down to whole milliseconds.
+* `hiccup: Nms`: a goroutine that does nothing but sleep for 1 ms in a loop
+  woke up more than 1 ms late. N is how late, rounded down to whole
+  milliseconds. Because that goroutine does no work of its own, a large
+  hiccup points at something that stalled the whole process, such as a GC
+  pause or the scheduler falling behind.
+
+Small values are common even when nothing is wrong. In my runs on an 18-core
+Linux machine, `hiccup: 1ms` showed up dozens of times per second, so a 1 ms
+hiccup on its own says little. Look for the larger values and the `gc` lines
+next to them. Both go to stderr, so they come out interleaved in roughly the
+order they happened. The `gc` lines carry time since program start rather
+than a wall-clock timestamp, so their order in the output is the easiest way
+to match the two up.
 
 == What is it
 
