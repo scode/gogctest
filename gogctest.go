@@ -9,7 +9,7 @@ import (
 	"sync"
 	"time"
 
-	lru "github.com/hashicorp/golang-lru"
+	lru "github.com/hashicorp/golang-lru/v2"
 	"golang.org/x/time/rate"
 )
 
@@ -70,7 +70,7 @@ func lruWorker() {
 			rand.Float64())))
 
 	lruSize := totalLruSize / threadCount
-	l, _ := lru.New(lruSize)
+	l, _ := lru.New[uint64, string](lruSize)
 	rateLimiter := rate.NewLimiter(rate.Limit(float64(totalAddRate)/float64(threadCount)), addRateBurst)
 	pauseReportThreshold, err := time.ParseDuration(pauseReportThreshold)
 	if err != nil {
