@@ -62,7 +62,16 @@ func main() {
 		log.Fatal("lru size must be >= thread count")
 	}
 
-	addRateBurst = int(totalAddRate/threadCount) / 10
+	// A limiter with a rate of zero or less never refills, so every worker
+	// would block forever after its first add.
+	if totalAddRate <= 0 {
+		log.Fatal("add rate must be > 0")
+	}
+
+	// rate.Limiter.Wait fails outright when asked for more tokens than the
+	// burst, so a burst of 0 (any rate under 10 adds/s per worker) would make
+	// every worker panic on its first add.
+	addRateBurst = max(1, int(totalAddRate/threadCount)/10)
 
 	// Nothing below ever returns, so Wait blocks forever. It is there to keep
 	// main alive while the goroutines run.
